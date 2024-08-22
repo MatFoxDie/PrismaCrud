@@ -61,16 +61,25 @@ app.delete('/users/:id', async (req, res) => {
 
 // CRUD para Author
 app.post('/authors', async (req, res) => {
-  const { tags, surname, completeName, userId } = req.body;
-  try {
-    const author = await prisma.author.create({
-      data: { tags, surname, completeName, userId },
-    });
-    res.json(author);
-  } catch (error) {
-    res.status(400).json({ error: error.message });
-  }
-});
+    const { tags, surname, completeName, userId } = req.body;
+    try {
+      // Verifica se o userId existe na tabela User
+      const userExists = await prisma.user.findUnique({
+        where: { id: Number(userId) },
+      });
+  
+      if (!userExists) {
+        return res.status(400).json({ error: 'User not found' });
+      }
+  
+      const author = await prisma.author.create({
+        data: { tags, surname, completeName, userId },
+      });
+      res.json(author);
+    } catch (error) {
+      res.status(400).json({ error: error.message });
+    }
+  });
 
 app.get('/authors', async (req, res) => {
   const authors = await prisma.author.findMany();
@@ -89,41 +98,68 @@ app.put('/authors/:id', async (req, res) => {
     const { id } = req.params;
     const { tags, surname, completeName, userId } = req.body;
     try {
-        const author = await prisma.author.update({
-            where: { id: Number(id) },
-            data: { tags, surname, completeName, userId },
-        });
-        res.json(author);
+      // Verifica se o userId existe na tabela User
+      const userExists = await prisma.user.findUnique({
+        where: { id: Number(userId) },
+      });
+  
+      if (!userExists) {
+        return res.status(400).json({ error: 'User not found' });
+      }
+  
+      const author = await prisma.author.update({
+        where: { id: Number(id) },
+        data: { tags, surname, completeName, userId },
+      });
+      res.json(author);
     } catch (error) {
-        res.status(400).json({ error: error.message });
+      res.status(400).json({ error: error.message });
     }
-});
-
-app.delete('/authors/:id', async (req, res) => {
-    const { id } = req.params;
-    try {
-        await prisma.author.delete({
-            where: { id: Number(id) },
-        });
-        res.sendStatus(204);
-    } catch (error) {
-        res.status(400).json({ error: error.message });
-    }
-});
-
-// CRUD Post
-app.post('/posts', async (req, res) => {
-    const { title, text, authorId } = req.body;
-    const post = await prisma.post.create({
-      data: { title, text, authorId },
-    });
-    res.json(post);
   });
   
-  app.get('/posts', async (req, res) => {
-    const posts = await prisma.post.findMany();
-    res.json(posts);
+
+  app.delete('/authors/:id', async (req, res) => {
+    const { id } = req.params;
+    try {
+      await prisma.author.delete({
+        where: { id: Number(id) },
+      });
+      res.sendStatus(204);
+    } catch (error) {
+      res.status(400).json({ error: error.message });
+    }
   });
+
+app.post('/posts', async (req, res) => {
+    const { title, text, authorId } = req.body;
+  
+    try {
+      // Verifica se o authorId existe na tabela Author
+      const authorExists = await prisma.author.findUnique({
+        where: { id: Number(authorId) },
+      });
+  
+      if (!authorExists) {
+        return res.status(400).json({ error: 'Author not found' });
+      }
+  
+      // Cria o novo Post
+      const post = await prisma.post.create({
+        data: { title, text, authorId },
+      });
+  
+      res.json(post);
+    } catch (error) {
+      res.status(400).json({ error: error.message });
+    }
+  });
+
+    app.get('/posts', async (req, res) => {
+        const posts = await prisma.post.findMany();
+        res.json(posts);
+    }
+);
+        
 
     app.get('/posts/:id', async (req, res) => {
         const { id } = req.params;
@@ -137,77 +173,126 @@ app.post('/posts', async (req, res) => {
         const { id } = req.params;
         const { title, text, authorId } = req.body;
         try {
-            const post = await prisma.post.update({
-                where: { id: Number(id) },
-                data: { title, text, authorId },
-            });
-            res.json(post);
+          // Verifica se o authorId existe na tabela Author
+          const authorExists = await prisma.author.findUnique({
+            where: { id: Number(authorId) },
+          });
+      
+          if (!authorExists) {
+            return res.status(400).json({ error: 'Author not found' });
+          }
+      
+          const post = await prisma.post.update({
+            where: { id: Number(id) },
+            data: { title, text, authorId },
+          });
+          res.json(post);
         } catch (error) {
-            res.status(400).json({ error: error.message });
+          res.status(400).json({ error: error.message });
         }
-    });
+      });
 
     app.delete('/posts/:id', async (req, res) => {
         const { id } = req.params;
         try {
-            await prisma.post.delete({
-                where: { id: Number(id) },
-            });
-            res.sendStatus(204);
+          await prisma.post.delete({
+            where: { id: Number(id) },
+          });
+          res.sendStatus(204);
         } catch (error) {
-            res.status(400).json({ error: error.message });
+          res.status(400).json({ error: error.message });
         }
     });
   
-  // CRUD Comment
-  app.post('/comments', async (req, res) => {
+// CRUD para Comment
+app.post('/comments', async (req, res) => {
     const { text, postId, userId } = req.body;
-    const comment = await prisma.comment.create({
-      data: { text, postId, userId },
-    });
-    res.json(comment);
-  });
   
+    try {
+      // Verifica se o postId existe na tabela Post
+      const postExists = await prisma.post.findUnique({
+        where: { id: Number(postId) },
+      });
+  
+      if (!postExists) {
+        return res.status(400).json({ error: 'Post not found' });
+      }
+  
+      // Verifica se o userId existe na tabela User
+      const userExists = await prisma.user.findUnique({
+        where: { id: Number(userId) },
+      });
+  
+      if (!userExists) {
+        return res.status(400).json({ error: 'User not found' });
+      }
+  
+      const comment = await prisma.comment.create({
+        data: { text, postId, userId },
+      });
+      res.json(comment);
+    } catch (error) {
+      res.status(400).json({ error: error.message });
+    }
+  });
+
   app.get('/comments', async (req, res) => {
     const comments = await prisma.comment.findMany();
     res.json(comments);
   });
 
-    app.get('/comments/:id', async (req, res) => {
-        const { id } = req.params;
-        const comment = await prisma.comment.findUnique({
-            where: { id: Number(id) },
-        });
-        res.json(comment);
-    }
-);
+  app.get('/comments/:id', async (req, res) => {
+    const { id } = req.params;
+    const comment = await prisma.comment.findUnique({
+      where: { id: Number(id) },
+    });
+    res.json(comment);
+  });
 
-app.put('/comments/:id', async (req, res) => {
+  app.put('/comments/:id', async (req, res) => {
     const { id } = req.params;
     const { text, postId, userId } = req.body;
     try {
-        const comment = await prisma.comment.update({
-            where: { id: Number(id) },
-            data: { text, postId, userId },
-        });
-        res.json(comment);
+      // Verifica se o postId existe na tabela Post
+      const postExists = await prisma.post.findUnique({
+        where: { id: Number(postId) },
+      });
+  
+      if (!postExists) {
+        return res.status(400).json({ error: 'Post not found' });
+      }
+  
+      // Verifica se o userId existe na tabela User
+      const userExists = await prisma.user.findUnique({
+        where: { id: Number(userId) },
+      });
+  
+      if (!userExists) {
+        return res.status(400).json({ error: 'User not found' });
+      }
+  
+      const comment = await prisma.comment.update({
+        where: { id: Number(id) },
+        data: { text, postId, userId },
+      });
+      res.json(comment);
     } catch (error) {
-        res.status(400).json({ error: error.message });
+      res.status(400).json({ error: error.message });
     }
-});
-    
-app.delete('/comments/:id', async (req, res) => {
+  });
+  
+  app.delete('/comments/:id', async (req, res) => {
     const { id } = req.params;
     try {
-        await prisma.comment.delete({
-            where: { id: Number(id) },
-        });
-        res.sendStatus(204);
+      await prisma.comment.delete({
+        where: { id: Number(id) },
+      });
+      res.sendStatus(204);
     } catch (error) {
-        res.status(400).json({ error: error.message });
+      res.status(400).json({ error: error.message });
     }
-});
-
+  });
+  
 
   
   const PORT = process.env.PORT || 3000;
